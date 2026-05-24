@@ -1,5 +1,13 @@
 async function getWeather() {
-  let city = document.getElementById("city").value;
-  let res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=35&longitude=139`);
-  document.getElementById("result").innerHTML = "Sample Weather Loaded!";
+  const city = document.getElementById("city").value;
+  const apiKey = "0f3be8c13fac004ddea273173f4ab9d4";
+  const res = await fetch(
+    `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+  );
+  const data = await res.json();
+  document.getElementById("result").innerHTML = `
+    🌡️ Temp: ${data.main.temp}°C | 
+    💧 Humidity: ${data.main.humidity}% | 
+    🌤️ ${data.weather[0].description}
+  `;
 }

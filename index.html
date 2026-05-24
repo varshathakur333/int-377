@@ -1,6 +1,1829 @@
-<h2>Weather App</h2>
-<input type="text" id="city" placeholder="Enter City">
-<button onclick="getWeather()">Check Weather</button>
-<p id="result"></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraWeather — Soft Watercolor Weather</title>
+    
+    <!-- Google Font Import: Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for UI Chrome Icons -->
+    <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
 
-<script src="app.js"></script>
+    <style>
+        /* ==========================================================================
+           1. DESIGN SYSTEM & TOKENS
+           ========================================================================== */
+        :root {
+            --font-space: 'Space Grotesk', sans-serif;
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            
+            /* Dynamic Palette Shift Variables (Transitioned via JS) */
+            --bg-color-1: #FFE8A3;
+            --bg-color-2: #BAE6FD;
+            --text-main: #1E293B;
+            --text-muted: #64748B;
+            --card-bg: rgba(255, 255, 255, 0.25);
+            --card-border: rgba(255, 255, 255, 0.45);
+            --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+            --glow-color: rgba(255, 255, 255, 0.5);
+            --search-bg: rgba(255, 255, 255, 0.3);
+            --search-border: rgba(255, 255, 255, 0.5);
+            
+            /* Smooth transitions */
+            --transition-theme: 800ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-ui: 200ms ease;
+        }
+
+        /* Weather-Specific Theme Helper Classes */
+        .theme-sunny {
+            --bg-color-1: #FFE8A3;
+            --bg-color-2: #FFFBEB;
+            --text-main: #451A03;
+            --text-muted: #78350F;
+            --card-bg: rgba(255, 255, 255, 0.35);
+            --card-border: rgba(255, 255, 255, 0.6);
+            --search-bg: rgba(255, 255, 255, 0.4);
+            --search-border: rgba(255, 255, 255, 0.65);
+        }
+
+        .theme-clouds {
+            --bg-color-1: #CBD5E1;
+            --bg-color-2: #E2E8F0;
+            --text-main: #0F172A;
+            --text-muted: #475569;
+            --card-bg: rgba(255, 255, 255, 0.25);
+            --card-border: rgba(255, 255, 255, 0.5);
+            --search-bg: rgba(255, 255, 255, 0.3);
+            --search-border: rgba(255, 255, 255, 0.5);
+        }
+
+        .theme-stormy {
+            --bg-color-1: #0B132B;
+            --bg-color-2: #3A0CA3;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --card-bg: rgba(15, 23, 42, 0.35);
+            --card-border: rgba(255, 255, 255, 0.15);
+            --search-bg: rgba(15, 23, 42, 0.4);
+            --search-border: rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-snow {
+            --bg-color-1: #E2E8F0;
+            --bg-color-2: #F8FAFC;
+            --text-main: #0F172A; /* shift to dark navy for contrast */
+            --text-muted: #334155;
+            --card-bg: rgba(255, 255, 255, 0.5);
+            --card-border: rgba(255, 255, 255, 0.7);
+            --search-bg: rgba(255, 255, 255, 0.6);
+            --search-border: rgba(255, 255, 255, 0.8);
+        }
+
+        .theme-fog {
+            --bg-color-1: #94A3B8;
+            --bg-color-2: #CBD5E1;
+            --text-main: #0F172A;
+            --text-muted: #334155;
+            --card-bg: rgba(255, 255, 255, 0.2);
+            --card-border: rgba(255, 255, 255, 0.4);
+            --search-bg: rgba(255, 255, 255, 0.25);
+            --search-border: rgba(255, 255, 255, 0.45);
+        }
+
+        .theme-tornado {
+            --bg-color-1: #5C3D2E;
+            --bg-color-2: #2D201A;
+            --text-main: #FBE2C5; /* amber tinted */
+            --text-muted: #D98C6C;
+            --card-bg: rgba(45, 32, 26, 0.45);
+            --card-border: rgba(251, 226, 197, 0.2);
+            --search-bg: rgba(45, 32, 26, 0.5);
+            --search-border: rgba(251, 226, 197, 0.25);
+        }
+
+        .theme-haze {
+            --bg-color-1: #C2A383;
+            --bg-color-2: #DFD3C3;
+            --text-main: #3E2723; /* boosted contrast */
+            --text-muted: #5D4037;
+            --card-bg: rgba(255, 255, 255, 0.3);
+            --card-border: rgba(255, 255, 255, 0.55);
+            --search-bg: rgba(255, 255, 255, 0.35);
+            --search-border: rgba(255, 255, 255, 0.6);
+        }
+
+        .theme-night {
+            --bg-color-1: #0F172A;
+            --bg-color-2: #1E1B4B;
+            --text-main: #F1F5F9;
+            --text-muted: #94A3B8;
+            --card-bg: rgba(15, 23, 42, 0.4);
+            --card-border: rgba(255, 255, 255, 0.15);
+            --search-bg: rgba(15, 23, 42, 0.45);
+            --search-border: rgba(255, 255, 255, 0.18);
+        }
+
+        /* ==========================================================================
+           2. GENERAL LAYOUT & STRUCTURAL SETUP
+           ========================================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            background-color: var(--bg-color-1);
+            transition: background-color var(--transition-theme);
+        }
+
+        /* Gorgeous Double Watercolor Backdrop Wash */
+        .watercolor-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-glow {
+            position: absolute;
+            width: 150vw;
+            height: 150vh;
+            top: -25vh;
+            left: -25vw;
+            background: radial-gradient(circle at 75% 25%, var(--bg-color-1) 0%, var(--bg-color-2) 60%, rgba(255,255,255,0) 100%);
+            mix-blend-mode: multiply;
+            transition: background var(--transition-theme);
+            opacity: 0.7;
+        }
+
+        /* Canvas layered behind UI, driven by weather ID */
+        #weather-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 400ms ease;
+        }
+
+        /* ==========================================================================
+           3. UI CHROME & FLOATING SEARCH BAR
+           ========================================================================== */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 1.5rem;
+            z-index: 100;
+        }
+
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .search-pill {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            background: var(--search-bg);
+            border: 1px solid var(--search-border);
+            border-radius: 50px;
+            padding: 0.35rem 0.5rem 0.35rem 1.25rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.04);
+            transition: border-color var(--transition-ui), background-color var(--transition-ui), box-shadow var(--transition-ui);
+        }
+
+        .search-pill:focus-within {
+            border-color: var(--text-main);
+            box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.08);
+        }
+
+        .search-pill input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .search-pill input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .search-btn {
+            background: var(--text-main);
+            color: var(--bg-color-1);
+            border: none;
+            outline: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform var(--transition-ui), opacity var(--transition-ui);
+        }
+
+        .search-btn:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .search-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Error Text and Shake Animation */
+        .error-message {
+            margin-top: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #DC2626; /* bright crimson for visibility */
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: opacity 200ms ease, transform 200ms ease;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+        }
+
+        .error-message.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            15%, 45%, 75% { transform: translateX(-6px); }
+            30%, 60%, 90% { transform: translateX(6px); }
+        }
+
+        /* ==========================================================================
+           4. FULL-VIEWPORT HERO CENTERPIECE
+           ========================================================================== */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            padding: 6.5rem 1.5rem 1.5rem 1.5rem;
+        }
+
+        .centerpiece {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .city-name {
+            font-family: var(--font-space);
+            font-weight: 300;
+            font-size: 3.5rem;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+            transition: color var(--transition-theme);
+        }
+
+        .weather-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .animated-icon-container {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .temp-display {
+            font-family: var(--font-space);
+            font-weight: 700;
+            font-size: 9.5rem;
+            line-height: 0.85;
+            color: var(--text-main);
+            letter-spacing: -0.06em;
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+            margin-left: 1rem;
+            transition: color var(--transition-theme);
+        }
+
+        .temp-deg {
+            font-size: 4rem;
+            font-weight: 300;
+            position: absolute;
+            top: 0.5rem;
+            right: -2.5rem;
+        }
+
+        .condition-badge {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: capitalize;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.02);
+            transition: color var(--transition-theme), border-color var(--transition-theme), background-color var(--transition-theme);
+        }
+
+        /* ==========================================================================
+           5. DETAIL STATS GRID & 5-DAY FORECAST ROW
+           ========================================================================== */
+        .bottom-section {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: auto;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .bottom-section {
+                grid-template-columns: 2fr 3fr;
+            }
+        }
+
+        /* Glassmorphic Cards Styling */
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: var(--card-shadow);
+            transition: background var(--transition-theme), border var(--transition-theme), box-shadow var(--transition-ui);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Details Panel */
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+            transition: color var(--transition-theme);
+        }
+
+        .detail-val {
+            font-family: var(--font-space);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: color var(--transition-theme);
+        }
+
+        /* Forecast Cards Row */
+        .forecast-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .forecast-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+            transition: color var(--transition-theme);
+        }
+
+        .forecast-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+        }
+
+        .forecast-day-card {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            padding: 0.85rem 0.4rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
+            cursor: pointer;
+        }
+
+        .forecast-day-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .forecast-day-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            transition: color var(--transition-theme);
+        }
+
+        .forecast-icon {
+            width: 36px;
+            height: 36px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .forecast-temp {
+            font-family: var(--font-space);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: color var(--transition-theme);
+        }
+
+        .forecast-temp-span {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-left: 0.1rem;
+            transition: color var(--transition-theme);
+        }
+
+        /* ==========================================================================
+           6. LOADING SHIMMER SKELETON
+           ========================================================================== */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.2) 37%, rgba(255,255,255,0.06) 63%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+            color: transparent !important;
+            border-color: transparent !important;
+            text-shadow: none !important;
+        }
+        
+        .shimmer * {
+            visibility: hidden !important;
+        }
+
+        /* ==========================================================================
+           7. CUSTOM SVG ANIME ICONS DESIGN (WATERCOLOR/PASTEL)
+           ========================================================================== */
+        .icon-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.06));
+        }
+
+        /* Core SVGs CSS Animations */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(-3deg) translateX(-2px); }
+            50% { transform: rotate(3deg) translateX(2px); }
+        }
+
+        @keyframes rain-drip {
+            0% { transform: translateY(-10px); opacity: 0; }
+            30% { opacity: 0.7; }
+            100% { transform: translateY(12px); opacity: 0; }
+        }
+
+        @keyframes lightning-flash {
+            0%, 90%, 94%, 98%, 100% { opacity: 0.2; }
+            92%, 96% { opacity: 1; filter: drop-shadow(0 0 8px rgba(186,104,200,0.8)); }
+        }
+
+        @keyframes snow-fall {
+            0% { transform: translateY(-12px) translateX(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(12px) translateX(4px); opacity: 0; }
+        }
+
+        .anim-spin { animation: spin 25s linear infinite; }
+        .anim-bob { animation: bob 4s ease-in-out infinite; }
+        .anim-sway { animation: sway 6s ease-in-out infinite; }
+        
+        .anim-drip-1 { animation: rain-drip 1.4s linear infinite; }
+        .anim-drip-2 { animation: rain-drip 1.4s linear infinite 0.4s; }
+        .anim-drip-3 { animation: rain-drip 1.4s linear infinite 0.8s; }
+        
+        .anim-lightning { animation: lightning-flash 3s linear infinite; }
+        
+        .anim-snow-1 { animation: snow-fall 2.2s linear infinite; }
+        .anim-snow-2 { animation: snow-fall 2.2s linear infinite 0.7s; }
+        .anim-snow-3 { animation: snow-fall 2.2s linear infinite 1.4s; }
+
+        /* General Entrance Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Footer styling */
+        footer {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-align: center;
+            width: 100%;
+            transition: color var(--transition-theme);
+        }
+
+        footer a {
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color var(--transition-theme);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Double Layered Watercolor Background Gradient Wash -->
+    <div class="watercolor-bg">
+        <div class="bg-glow"></div>
+    </div>
+
+    <!-- Interactive Canvas Layer -->
+    <canvas id="weather-canvas"></canvas>
+
+    <!-- Floating Top Search Bar -->
+    <header>
+        <div class="search-container">
+            <form id="search-form" onsubmit="handleSearch(event)" class="search-pill">
+                <input 
+                    type="text" 
+                    id="city-input" 
+                    placeholder="Mumbai..."
+                    autocomplete="off"
+                >
+                <button type="submit" class="search-btn" aria-label="Search city">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <div id="error-msg" class="error-message">City not found</div>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Hero Section -->
+    <main>
+        <div class="centerpiece">
+            <h1 class="city-name" id="city-name">Mumbai</h1>
+            
+            <div class="weather-meta-row">
+                <div class="animated-icon-container" id="icon-container">
+                    <!-- Dynamic inline SVG will be injected here -->
+                </div>
+                <div class="temp-display">
+                    <span id="temp-number">28</span>
+                    <span class="temp-deg">°</span>
+                </div>
+            </div>
+            
+            <div class="condition-badge" id="condition-badge">Scattered Clouds</div>
+        </div>
+
+        <!-- Details Grid & Weekly Forecast Row -->
+        <div class="bottom-section">
+            
+            <!-- Parameters Details Panel -->
+            <div class="glass-card">
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Feels Like</span>
+                        <span class="detail-val" id="val-feels">31°C</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Humidity</span>
+                        <span class="detail-val" id="val-humidity">64%</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Wind Speed</span>
+                        <span class="detail-val" id="val-wind">12 km/h</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">UV Index</span>
+                        <span class="detail-val" id="val-uv">6.4 (High)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5-Day Forecast Row -->
+            <div class="glass-card forecast-container">
+                <div class="forecast-title">5-Day Outlook</div>
+                <div class="forecast-row" id="forecast-row">
+                    <!-- Injected by script -->
+                    <div class="forecast-day-card">
+                        <span class="forecast-day-name">Mon</span>
+                        <div class="forecast-icon"></div>
+                        <span class="forecast-temp">30°<span class="forecast-temp-span">24°</span></span>
+                    </div>
+                    <div class="forecast-day-card">
+                        <span class="forecast-day-name">Tue</span>
+                        <div class="forecast-icon"></div>
+                        <span class="forecast-temp">30°<span class="forecast-temp-span">24°</span></span>
+                    </div>
+                    <div class="forecast-day-card">
+                        <span class="forecast-day-name">Wed</span>
+                        <div class="forecast-icon"></div>
+                        <span class="forecast-temp">30°<span class="forecast-temp-span">24°</span></span>
+                    </div>
+                    <div class="forecast-day-card">
+                        <span class="forecast-day-name">Thu</span>
+                        <div class="forecast-icon"></div>
+                        <span class="forecast-temp">30°<span class="forecast-temp-span">24°</span></span>
+                    </div>
+                    <div class="forecast-day-card">
+                        <span class="forecast-day-name">Fri</span>
+                        <div class="forecast-icon"></div>
+                        <span class="forecast-temp">30°<span class="forecast-temp-span">24°</span></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- UI Chrome Footer -->
+    <footer>
+        AuraWeather &copy; 2026. Handcrafted with watercolor aesthetics. Powered by OpenWeather.
+    </footer>
+
+    <!-- ==========================================================================
+       8. JAVASCRIPT: CANVAS ENGINE, API CORE & DYNAMIC UI
+       ========================================================================== -->
+    <script>
+        // Real OpenWeather API Configuration
+        const API_KEY = "0f3be8c13fac004ddea273173f4ab9d4";
+        const WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather";
+        const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
+
+        // Global State & UI References
+        const citiesList = ["Mumbai", "London", "Tokyo", "Dubai"];
+        let placeholderIdx = 0;
+        let placeholderTimer = null;
+        let animId = null; // Canvas render loop reference
+        
+        let canvas = null;
+        let ctx = null;
+        let W = window.innerWidth;
+        let H = window.innerHeight;
+        let particles = [];
+        let canvasTime = 0;
+        
+        // Active custom storm states
+        let lightningState = null;
+        let flashTimer = 0;
+        let nextFlashTime = 120 + Math.random() * 120; // 2-4 seconds at 60 FPS
+        let tornadoAngle = 0;
+        let fogBandsList = [];
+        let fogCloudsList = [];
+
+        // SVG Condition Icons
+        const svgIcons = {
+            clear: `
+                <svg class="icon-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="anim-spin" cx="50" cy="50" r="22" fill="url(#sun-gradient)" style="transform-origin: 50px 50px;"/>
+                    <g class="anim-spin" style="transform-origin: 50px 50px;">
+                        <circle cx="50" cy="14" r="4.5" fill="#FBBF24"/>
+                        <circle cx="50" cy="86" r="4.5" fill="#FBBF24"/>
+                        <circle cx="14" cy="50" r="4.5" fill="#FBBF24"/>
+                        <circle cx="86" cy="50" r="4.5" fill="#FBBF24"/>
+                        <circle cx="24.5" cy="24.5" r="4.5" fill="#FBBF24"/>
+                        <circle cx="75.5" cy="75.5" r="4.5" fill="#FBBF24"/>
+                        <circle cx="24.5" cy="75.5" r="4.5" fill="#FBBF24"/>
+                        <circle cx="75.5" cy="24.5" r="4.5" fill="#FBBF24"/>
+                    </g>
+                    <defs>
+                        <radialGradient id="sun-gradient" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(50 50) rotate(90) scale(22)">
+                            <stop offset="0%" stop-color="#FFE082"/>
+                            <stop offset="100%" stop-color="#F59E0B"/>
+                        </radialGradient>
+                    </defs>
+                </svg>
+            `,
+            clouds: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse class="anim-sway" cx="38" cy="52" rx="20" ry="16" fill="url(#cloud-back)" style="transform-origin: 38px 52px; opacity: 0.7;"/>
+                    <ellipse cx="60" cy="58" rx="24" ry="18" fill="url(#cloud-front)"/>
+                    <ellipse cx="44" cy="62" rx="18" ry="14" fill="url(#cloud-front)"/>
+                    <defs>
+                        <linearGradient id="cloud-front" x1="60" y1="40" x2="60" y2="76" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#CBD5E1"/>
+                        </linearGradient>
+                        <linearGradient id="cloud-back" x1="38" y1="36" x2="38" y2="68" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#F1F5F9"/>
+                            <stop offset="100%" stop-color="#94A3B8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            drizzle: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="42" rx="26" ry="18" fill="url(#drizzle-cloud)"/>
+                    <path class="anim-drip-1" d="M38 66 L35 76" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+                    <path class="anim-drip-2" d="M50 68 L47 78" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+                    <path class="anim-drip-3" d="M62 66 L59 76" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="drizzle-cloud" x1="50" y1="24" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#94A3B8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            rain: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="40" rx="28" ry="19" fill="url(#rain-cloud)"/>
+                    <path class="anim-drip-1" d="M36 68 L32 80" stroke="#60A5FA" stroke-width="3.5" stroke-linecap="round"/>
+                    <path class="anim-drip-2" d="M50 72 L46 84" stroke="#60A5FA" stroke-width="3.5" stroke-linecap="round"/>
+                    <path class="anim-drip-3" d="M64 68 L60 80" stroke="#60A5FA" stroke-width="3.5" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="rain-cloud" x1="50" y1="21" x2="50" y2="59" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#E2E8F0"/>
+                            <stop offset="100%" stop-color="#64748B"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            thunder: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="38" rx="28" ry="20" fill="url(#storm-cloud)"/>
+                    <path class="anim-lightning" d="M48 58 L38 72 L48 70 L42 86 L56 68 L46 70 Z" fill="#F59E0B" stroke="#D97706" stroke-width="1.5" stroke-linejoin="round"/>
+                    <path class="anim-drip-1" d="M30 68 L27 78" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+                    <path class="anim-drip-2" d="M66 68 L63 78" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="storm-cloud" x1="50" y1="18" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#475569"/>
+                            <stop offset="100%" stop-color="#1E293B"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            snow: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="40" rx="26" ry="18" fill="url(#snow-cloud)"/>
+                    <!-- Small crystals falling -->
+                    <circle class="anim-snow-1" cx="36" cy="68" r="3.5" fill="#E2E8F0"/>
+                    <circle class="anim-snow-2" cx="50" cy="72" r="3.5" fill="#FFFFFF"/>
+                    <circle class="anim-snow-3" cx="64" cy="68" r="3.5" fill="#E2E8F0"/>
+                    <defs>
+                        <linearGradient id="snow-cloud" x1="50" y1="22" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#94A3B8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            fog: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse class="anim-sway" cx="50" cy="38" rx="24" ry="16" fill="url(#fog-cloud)" style="transform-origin: 50px 38px; opacity: 0.65;"/>
+                    <line class="anim-sway" x1="20" y1="62" x2="80" y2="62" stroke="#CBD5E1" stroke-width="4.5" stroke-linecap="round" style="animation-delay: -1s;"/>
+                    <line class="anim-sway" x1="28" y1="72" x2="72" y2="72" stroke="#CBD5E1" stroke-width="4.5" stroke-linecap="round" style="animation-delay: -2s;"/>
+                    <line class="anim-sway" x1="38" y1="82" x2="62" y2="82" stroke="#CBD5E1" stroke-width="4.5" stroke-linecap="round" style="animation-delay: -3s;"/>
+                    <defs>
+                        <linearGradient id="fog-cloud" x1="50" y1="22" x2="50" y2="54" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#E2E8F0"/>
+                            <stop offset="100%" stop-color="#94A3B8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            tornado: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g class="anim-sway" style="transform-origin: 50px 50px;">
+                        <ellipse cx="50" cy="20" rx="34" ry="8" fill="#8B5A2B" opacity="0.3"/>
+                        <ellipse cx="50" cy="32" rx="26" ry="7.5" fill="#A0522D" opacity="0.45"/>
+                        <ellipse cx="50" cy="45" rx="20" ry="7" fill="#CD853F" opacity="0.6"/>
+                        <ellipse cx="50" cy="58" rx="14" ry="6.5" fill="#D2B48C" opacity="0.75"/>
+                        <ellipse cx="50" cy="71" rx="8" ry="6" fill="#F5DEB3" opacity="0.9"/>
+                        <ellipse cx="50" cy="84" rx="4" ry="4" fill="#FFE4C4"/>
+                    </g>
+                </svg>
+            `,
+            haze: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="42" r="18" fill="url(#haze-sun)" opacity="0.85"/>
+                    <line class="anim-sway" x1="15" y1="64" x2="85" y2="64" stroke="#D7CCC8" stroke-width="5" stroke-linecap="round"/>
+                    <line class="anim-sway" x1="22" y1="74" x2="78" y2="74" stroke="#D7CCC8" stroke-width="5" stroke-linecap="round" style="animation-delay: -1.5s;"/>
+                    <defs>
+                        <radialGradient id="haze-sun" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(50 42) rotate(90) scale(18)">
+                            <stop offset="0%" stop-color="#FFECB3"/>
+                            <stop offset="100%" stop-color="#FFB74D"/>
+                        </radialGradient>
+                    </defs>
+                </svg>
+            `,
+            night: `
+                <svg class="icon-svg anim-bob" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="anim-spin" d="M62 58 C62 44.75 51.25 34 38 34 C35.4 34 32.9 34.4 30.6 35.2 C35.4 43.1 44 48.4 53.8 48.4 C56.6 48.4 59.3 47.9 61.8 47 C61.9 47.3 62 47.7 62 48 C62 61.25 51.25 72 38 72 C35.4 72 32.9 71.6 30.6 70.8 C37.8 80.8 51.5 86 64.6 79.5 C77.7 73 81.3 56.4 72.8 45 C67.2 53 58 58 48 58 Z" fill="url(#night-moon)" style="transform-origin: 50px 50px; animation-duration: 40s;"/>
+                    <defs>
+                        <linearGradient id="night-moon" x1="30" y1="34" x2="75" y2="79" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#E2E8F0"/>
+                            <stop offset="100%" stop-color="#94A3B8"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `
+        };
+
+        // ==========================================================================
+        // MAIN RUNTIME & INITIALIZATION
+        // ==========================================================================
+        window.addEventListener("DOMContentLoaded", () => {
+            initCanvasEngine();
+            startPlaceholderCycle();
+            
+            // Initial fetch of default city
+            fetchWeatherData("Mumbai");
+        });
+
+        // Initialize Canvas Stretcher and Events
+        function initCanvasEngine() {
+            canvas = document.getElementById("weather-canvas");
+            ctx = canvas.getContext("2d");
+            
+            resizeCanvas();
+            window.addEventListener("resize", resizeCanvas);
+        }
+
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.scale(dpr, dpr);
+            
+            // Re-stretch styles
+            canvas.style.width = W + "px";
+            canvas.style.height = H + "px";
+        }
+
+        // ==========================================================================
+        // API FETCH & UTILITY METHODS
+        // ==========================================================================
+        async function fetchWeatherData(city) {
+            setLoadingState(true);
+            
+            try {
+                const response = await fetch(`${WEATHER_URL}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`);
+                if (!response.ok) throw new Error("City not found");
+                
+                const weatherData = await response.json();
+                
+                // Fetch 5-Day Forecast
+                const forecastResponse = await fetch(`${FORECAST_URL}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`);
+                if (!forecastResponse.ok) throw new Error("Forecast failed");
+                const forecastData = await forecastResponse.json();
+
+                updateUI(weatherData, forecastData);
+                document.getElementById("error-msg").classList.remove("visible");
+                document.getElementById("city-input").classList.remove("error-shake");
+            } catch (error) {
+                console.error("API error:", error);
+                triggerErrorState();
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        // Show/Hide elegant skeleton shimmer cards
+        function setLoadingState(isLoading) {
+            const shimmers = [
+                document.getElementById("city-name"),
+                document.getElementById("temp-number"),
+                document.getElementById("condition-badge"),
+                document.getElementById("val-feels"),
+                document.getElementById("val-humidity"),
+                document.getElementById("val-wind"),
+                document.getElementById("val-uv")
+            ];
+
+            const forecastCards = document.querySelectorAll(".forecast-day-card");
+            
+            if (isLoading) {
+                shimmers.forEach(el => el.classList.add("shimmer"));
+                forecastCards.forEach(card => card.classList.add("shimmer"));
+                document.getElementById("weather-canvas").style.opacity = 0;
+            } else {
+                shimmers.forEach(el => el.classList.remove("shimmer"));
+                forecastCards.forEach(card => card.classList.remove("shimmer"));
+                setTimeout(() => {
+                    document.getElementById("weather-canvas").style.opacity = 1;
+                }, 100);
+            }
+        }
+
+        // Handle error UI states with subtle inputs shaking
+        function triggerErrorState() {
+            const input = document.getElementById("city-input");
+            const err = document.getElementById("error-msg");
+            
+            input.classList.remove("error-shake");
+            void input.offsetWidth; // Trigger reflow for reset CSS Animation
+            input.classList.add("error-shake");
+            
+            err.classList.add("visible");
+            setTimeout(() => {
+                err.classList.remove("visible");
+            }, 3500);
+        }
+
+        function handleSearch(e) {
+            e.preventDefault();
+            const query = document.getElementById("city-input").value.trim();
+            if (query) {
+                fetchWeatherData(query);
+            }
+        }
+
+        // Cycle Floating Input Placeholders every 2 seconds
+        function startPlaceholderCycle() {
+            const input = document.getElementById("city-input");
+            placeholderTimer = setInterval(() => {
+                placeholderIdx = (placeholderIdx + 1) % citiesList.length;
+                input.placeholder = citiesList[placeholderIdx] + "...";
+            }, 2000);
+        }
+
+        // Count up weather temperature metric beautifully
+        function countUpTemperature(targetVal) {
+            const el = document.getElementById("temp-number");
+            const duration = 600; // ms
+            const startVal = 0;
+            let startTime = null;
+
+            function animationStep(now) {
+                if (!startTime) startTime = now;
+                const progress = Math.min((now - startTime) / duration, 1);
+                
+                // standard count calculation supporting positive and negative
+                const current = Math.floor(progress * (targetVal - startVal) + startVal);
+                el.innerText = current;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animationStep);
+                } else {
+                    el.innerText = targetVal;
+                }
+            }
+            requestAnimationFrame(animationStep);
+        }
+
+        // Estimate index value dynamically based on Coordinates, Sun state and Clouds
+        function calculateUVIndex(lat, clouds) {
+            // max realistic UV based on distance to Equator
+            let baseUV = 12 - (Math.abs(lat) / 8);
+            
+            // Adjust factor based on time of day (peak at noon)
+            const hr = new Date().getHours();
+            let hrDiff = Math.abs(hr - 12);
+            let timeFactor = Math.max(0, 1 - (hrDiff / 6.5));
+            
+            // Cloud coverage scales UV downward (up to 65% reduction)
+            let cloudMultiplier = 1 - (clouds / 100) * 0.65;
+            
+            let val = Math.max(0.1, baseUV * timeFactor * cloudMultiplier);
+            val = Math.round(val * 10) / 10;
+            
+            let label = "Low";
+            if (val >= 11) label = "Extreme";
+            else if (val >= 8) label = "Very High";
+            else if (val >= 6) label = "High";
+            else if (val >= 3) label = "Moderate";
+            
+            return `${val} (${label})`;
+        }
+
+        // Mapping condition code ID to effect name
+        function getEffectName(id) {
+            if (id === 800) return "clear";
+            if (id >= 801 && id <= 804) return "clouds";
+            if (id >= 300 && id <= 321) return "drizzle";
+            if (id >= 500 && id <= 531) return "rain";
+            if (id >= 200 && id <= 232) return "thunder";
+            if (id >= 600 && id <= 622) return "snow";
+            if (id === 781) return "tornado";
+            if (id === 711 || id === 721 || id === 731 || id === 751 || id === 761 || id === 762) return "haze";
+            return "fog"; // atmospheric rests (fog, mist, sand, dust)
+        }
+
+        // Apply visual watercolor colors based on condition name & time
+        function applyWeatherTheme(effectName, isNight, rawId) {
+            const body = document.body;
+            body.className = ""; // clear all layout themes
+            
+            if (isNight && (effectName === "clear" || effectName === "clouds")) {
+                body.classList.add("theme-night");
+                return "night";
+            }
+            
+            switch (effectName) {
+                case "clear":
+                    body.classList.add("theme-sunny");
+                    break;
+                case "clouds":
+                    body.classList.add("theme-clouds");
+                    break;
+                case "drizzle":
+                case "rain":
+                    body.classList.add("theme-clouds"); // fallback or custom wet
+                    break;
+                case "thunder":
+                    body.classList.add("theme-stormy");
+                    break;
+                case "snow":
+                    body.classList.add("theme-snow");
+                    break;
+                case "tornado":
+                    body.classList.add("theme-tornado");
+                    break;
+                case "haze":
+                    body.classList.add("theme-haze");
+                    break;
+                case "fog":
+                default:
+                    body.classList.add("theme-fog");
+                    break;
+            }
+            return effectName;
+        }
+
+        // Core UI updating method
+        function updateUI(w, f) {
+            // City Name & basic temps
+            document.getElementById("city-name").innerText = w.name;
+            document.getElementById("condition-badge").innerText = w.weather[0].description;
+            
+            const temp = Math.round(w.main.temp);
+            countUpTemperature(temp);
+            
+            // Set detailed cards data
+            document.getElementById("val-feels").innerText = `${Math.round(w.main.feels_like)}°C`;
+            document.getElementById("val-humidity").innerText = `${w.main.humidity}%`;
+            
+            // Wind conversion m/s to km/h
+            const windKmh = Math.round(w.wind.speed * 3.6);
+            document.getElementById("val-wind").innerText = `${windKmh} km/h`;
+            
+            // Estimated UV index
+            const uvStr = calculateUVIndex(w.coord.lat, w.clouds.all);
+            document.getElementById("val-uv").innerText = uvStr;
+
+            // Night or Day validation based on coordinate sunrise/sunset and time
+            const nowTime = w.dt;
+            const sunrise = w.sys.sunrise;
+            const sunset = w.sys.sunset;
+            const isNight = nowTime < sunrise || nowTime > sunset;
+
+            // Setup main SVG centerpiece matching state
+            const effectName = getEffectName(w.weather[0].id);
+            const activeTheme = applyWeatherTheme(effectName, isNight, w.weather[0].id);
+            
+            let coreIcon = svgIcons[effectName];
+            if (activeTheme === "night") {
+                coreIcon = svgIcons.night;
+            }
+            document.getElementById("icon-container").innerHTML = coreIcon;
+
+            // Parse and inject 5 days Forecast Cards
+            buildForecastCards(f.list);
+
+            // Re-initialize Background Canvas effects
+            startEffect(w.weather[0].id, activeTheme === "night");
+        }
+
+        // Standard 5-day layout parser (picks one list element per day at midday)
+        function buildForecastCards(list) {
+            const container = document.getElementById("forecast-row");
+            container.innerHTML = ""; // clean
+
+            // group list elements by day
+            const dailyData = {};
+            list.forEach(item => {
+                const date = new Date(item.dt * 1000);
+                const dayKey = date.toLocaleDateString('en-US', { weekday: 'short' });
+                
+                if (!dailyData[dayKey]) {
+                    dailyData[dayKey] = [];
+                }
+                dailyData[dayKey].push(item);
+            });
+
+            // Extract exactly 5 days
+            const dayKeys = Object.keys(dailyData).slice(0, 5);
+            dayKeys.forEach(day => {
+                const dayItems = dailyData[day];
+                
+                // Get absolute highs and lows for the day
+                let high = -999;
+                let low = 999;
+                let weatherId = 800; // default clear
+                
+                dayItems.forEach(item => {
+                    if (item.main.temp_max > high) high = item.main.temp_max;
+                    if (item.main.temp_min < low) low = item.main.temp_min;
+                    // pick condition around midday for representative card representation
+                    const hour = new Date(item.dt * 1000).getHours();
+                    if (hour >= 11 && hour <= 15) {
+                        weatherId = item.weather[0].id;
+                    }
+                });
+
+                if (weatherId === 800 && dayItems[0].weather[0].id !== 800) {
+                    weatherId = dayItems[0].weather[0].id;
+                }
+
+                const effName = getEffectName(weatherId);
+                const dayCard = document.createElement("div");
+                dayCard.className = "forecast-day-card";
+                
+                // Inline representation injection
+                dayCard.innerHTML = `
+                    <span class="forecast-day-name">${day}</span>
+                    <div class="forecast-icon">
+                        ${svgIcons[effName] || svgIcons.clear}
+                    </div>
+                    <span class="forecast-temp">
+                        ${Math.round(high)}°<span class="forecast-temp-span">${Math.round(low)}°</span>
+                    </span>
+                `;
+                container.appendChild(dayCard);
+            });
+        }
+
+        // ==========================================================================
+        // 9 DYNAMIC CANVAS WEATHER EFFECTS ENGINES
+        // ==========================================================================
+        function startEffect(conditionId, isNight) {
+            cancelAnimationFrame(animId);
+            const name = getEffectName(conditionId);
+            
+            // Pre-load layout variables
+            initParticles(name, W, H, conditionId, isNight);
+            
+            function loop() {
+                ctx.clearRect(0, 0, W, H);
+                canvasTime += 0.016; // increment standard time (approx 60fps)
+                
+                drawEffect(name, isNight, conditionId);
+                
+                animId = requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        // Setup particles arrays for different weather styles
+        function initParticles(name, width, height, rawId, isNight) {
+            particles = [];
+            canvasTime = 0;
+            lightningState = null;
+            tornadoAngle = 0;
+            fogBandsList = [];
+            fogCloudsList = [];
+
+            if (isNight) {
+                // Initialize night stars particles
+                for (let i = 0; i < 45; i++) {
+                    particles.push({
+                        x: Math.random() * width,
+                        y: Math.random() * (height * 0.7),
+                        r: 0.5 + Math.random() * 1.5,
+                        opacity: 0.2 + Math.random() * 0.8,
+                        speed: 0.005 + Math.random() * 0.01
+                    });
+                }
+                return;
+            }
+
+            switch (name) {
+                case "clear":
+                    // No particles needed, pure sun math vectors
+                    break;
+                case "clouds":
+                    // Drifting cloud clusters (4 to 6 clouds)
+                    const count = 4 + Math.floor(Math.random() * 3);
+                    // Map opacity linearly: 801 (1 cloud) => 0.12, 804 (overcast) => 0.35
+                    let baseOpacity = 0.12;
+                    if (rawId === 802) baseOpacity = 0.20;
+                    if (rawId === 803) baseOpacity = 0.28;
+                    if (rawId === 804) baseOpacity = 0.35;
+
+                    for (let i = 0; i < count; i++) {
+                        particles.push({
+                            x: Math.random() * width,
+                            y: 80 + Math.random() * (height * 0.3),
+                            speed: 0.1 + Math.random() * 0.3, // 0.1 to 0.4px speed
+                            scale: 0.7 + Math.random() * 0.9,
+                            seed: Math.random() * 100,
+                            opacity: baseOpacity
+                        });
+                    }
+                    break;
+
+                case "drizzle":
+                    // 60 thin rain streaks
+                    for (let i = 0; i < 60; i++) {
+                        particles.push({
+                            x: Math.random() * width,
+                            y: Math.random() * height,
+                            len: 8 + Math.random() * 4, // 8-12px
+                            speed: 3 + Math.random() * 2, // 3-5 px/frame
+                            opacity: 0.3 + Math.random() * 0.2, // 0.3-0.5
+                            splash: null
+                        });
+                    }
+                    break;
+
+                case "rain":
+                    // 130 rain streaks
+                    for (let i = 0; i < 130; i++) {
+                        particles.push({
+                            x: Math.random() * width,
+                            y: Math.random() * height,
+                            len: 16 + Math.random() * 8, // 16-24px
+                            speed: 9 + Math.random() * 6, // 9-15 px/frame
+                            opacity: 0.4 + Math.random() * 0.3, // 0.4-0.7
+                            ripples: []
+                        });
+                    }
+                    break;
+
+                case "thunder":
+                    // Thunderstorm has 200 drops as base layer
+                    for (let i = 0; i < 200; i++) {
+                        particles.push({
+                            x: Math.random() * width,
+                            y: Math.random() * height,
+                            len: 16 + Math.random() * 8,
+                            speed: 9 + Math.random() * 6,
+                            opacity: 0.4 + Math.random() * 0.3,
+                            ripples: []
+                        });
+                    }
+                    flashTimer = 0;
+                    nextFlashTime = 120 + Math.random() * 120;
+                    break;
+
+                case "snow":
+                    // 90 snowflakes
+                    for (let i = 0; i < 90; i++) {
+                        particles.push({
+                            x: Math.random() * width,
+                            y: Math.random() * height,
+                            r: 1.5 + Math.random() * 3.5, // 1.5-5px radius
+                            speed: 0.5 + Math.random() * 1.3, // 0.5-1.8 px/frame
+                            opacity: 0.6 + Math.random() * 0.4, // 0.6-1.0
+                            seed: Math.random() * 100 // drift variable
+                        });
+                    }
+                    break;
+
+                case "fog":
+                    // 6 horizontal fog bands scrolling left (60px tall)
+                    for (let i = 0; i < 6; i++) {
+                        fogBandsList.push({
+                            yBase: (height / 7) * (i + 1),
+                            speed: 0.15 + Math.random() * 0.2,
+                            opacity: 0.08 + Math.random() * 0.1, // 0.08-0.18 per band
+                            x: Math.random() * width,
+                            height: 60
+                        });
+                    }
+                    // 4 large ellipse clouds drifting across mid-screen
+                    for (let i = 0; i < 4; i++) {
+                        fogCloudsList.push({
+                            x: Math.random() * width,
+                            y: height * 0.25 + Math.random() * (height * 0.35),
+                            rx: 160 + Math.random() * 120,
+                            ry: 60 + Math.random() * 40,
+                            speed: 0.08 + Math.random() * 0.1,
+                            opacity: 0.06 + Math.random() * 0.06
+                        });
+                    }
+                    break;
+
+                case "tornado":
+                    // Widening helix spiral base debris particles (30 rects)
+                    for (let i = 0; i < 30; i++) {
+                        particles.push({
+                            angle: Math.random() * Math.PI * 2,
+                            dist: 20 + Math.random() * 130,
+                            speed: 0.015 + Math.random() * 0.02,
+                            size: 2.5 + Math.random() * 4.5,
+                            color: `rgba(90, 70, 50, ${0.15 + Math.random() * 0.25})`,
+                            yOffset: (Math.random() - 0.5) * 50
+                        });
+                    }
+                    tornadoAngle = 0;
+                    break;
+
+                case "haze":
+                    // 8 large semi-transparent ellipses slowly drifting and overlapping
+                    for (let i = 0; i < 8; i++) {
+                        particles.push({
+                            x: Math.random() * width,
+                            y: Math.random() * height,
+                            rx: 220 + Math.random() * 160,
+                            ry: 120 + Math.random() * 90,
+                            speedX: (Math.random() - 0.5) * 0.25,
+                            speedY: (Math.random() - 0.5) * 0.15,
+                            opacity: 0.08 + Math.random() * 0.07 // 0.08-0.15
+                        });
+                    }
+                    break;
+            }
+        }
+
+        // Redraw canvas context every frame based on initialized styles
+        function drawEffect(name, isNight, rawId) {
+            if (isNight) {
+                // Night visual: twinkling soft watercolor stars
+                particles.forEach(p => {
+                    const dynamicOpacity = p.opacity * (0.6 + 0.4 * Math.sin(canvasTime * 4 + p.x));
+                    ctx.fillStyle = `rgba(255, 255, 255, ${dynamicOpacity})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                return;
+            }
+
+            switch (name) {
+                case "clear":
+                    // Animated radial sun at top-right
+                    const sunX = W - 110;
+                    const sunY = 110;
+                    
+                    // 0.5s intervals warm amber lens glow pulsing behind sun disc
+                    // 0.5s interval maps to period = 0.5s. f = 2Hz. angular = 4 * Math.PI.
+                    const pulse = 1 + 0.12 * Math.sin(canvasTime * Math.PI * 4);
+                    
+                    // Lens Glow Gradient
+                    const glowGrad = ctx.createRadialGradient(sunX, sunY, 30, sunX, sunY, 110 * pulse);
+                    glowGrad.addColorStop(0, "rgba(251, 191, 36, 0.35)");
+                    glowGrad.addColorStop(0.5, "rgba(245, 158, 11, 0.12)");
+                    glowGrad.addColorStop(1, "rgba(245, 158, 11, 0)");
+                    
+                    ctx.fillStyle = glowGrad;
+                    ctx.beginPath();
+                    ctx.arc(sunX, sunY, 140 * pulse, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Rays rotating slowly (t * 0.25 rad/s)
+                    ctx.save();
+                    ctx.translate(sunX, sunY);
+                    ctx.rotate(canvasTime * 0.25);
+                    ctx.strokeStyle = "rgba(251, 191, 36, 0.45)";
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = "round";
+                    for (let i = 0; i < 8; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(62, 0);
+                        ctx.lineTo(82, 0);
+                        ctx.stroke();
+                        ctx.rotate(Math.PI / 4); // 8 rays
+                    }
+                    ctx.restore();
+
+                    // Main Sun Disk
+                    ctx.beginPath();
+                    ctx.arc(sunX, sunY, 44, 0, Math.PI * 2);
+                    const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 44);
+                    sunGrad.addColorStop(0, "#FFE082");
+                    sunGrad.addColorStop(1, "#F59E0B");
+                    ctx.fillStyle = sunGrad;
+                    ctx.shadowColor = "rgba(245, 158, 11, 0.3)";
+                    ctx.shadowBlur = 24;
+                    ctx.fill();
+                    ctx.shadowBlur = 0; // reset
+                    break;
+
+                case "clouds":
+                    // Render clouds cluster drifting
+                    particles.forEach(p => {
+                        ctx.save();
+                        // Slight vertical bob using Math.sin(t + index)
+                        const bob = Math.sin(canvasTime * 1.5 + p.seed) * 8;
+                        ctx.translate(p.x, p.y + bob);
+                        ctx.scale(p.scale, p.scale);
+                        
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, 48, 32, 0, 0, Math.PI * 2);
+                        ctx.ellipse(-32, 8, 32, 22, 0, 0, Math.PI * 2);
+                        ctx.ellipse(32, 8, 34, 22, 0, 0, Math.PI * 2);
+                        ctx.ellipse(0, 15, 55, 18, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Update positioning drifting left to right
+                        p.x += p.speed;
+                        if (p.x - 120 > W) {
+                            p.x = -120;
+                            p.y = 80 + Math.random() * (H * 0.3);
+                        }
+                    });
+                    break;
+
+                case "drizzle":
+                    // 60 thin rain streaks, angled -5deg
+                    const drizAngle = -5 * Math.PI / 180;
+                    const drizDx = Math.sin(drizAngle);
+                    const drizDy = Math.cos(drizAngle);
+
+                    particles.forEach(p => {
+                        ctx.strokeStyle = `rgba(160, 200, 240, ${p.opacity})`;
+                        ctx.lineWidth = 1;
+                        ctx.lineCap = "round";
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x + drizDx * p.len, p.y + drizDy * p.len);
+                        ctx.stroke();
+
+                        p.y += p.speed;
+                        p.x += drizDx * p.speed;
+
+                        // Subtle splash dot at bottom on reset
+                        if (p.y >= H - 10) {
+                            p.splash = { x: p.x, r: 1, opacity: 0.6 };
+                            p.y = -p.len;
+                            p.x = Math.random() * W;
+                        }
+
+                        // Render active splashes
+                        if (p.splash) {
+                            ctx.fillStyle = `rgba(160, 200, 240, ${p.splash.opacity})`;
+                            ctx.beginPath();
+                            ctx.arc(p.splash.x, H - 4, p.splash.r, 0, Math.PI * 2);
+                            ctx.fill();
+                            
+                            p.splash.r += 0.4;
+                            p.splash.opacity -= 0.08;
+                            if (p.splash.opacity <= 0) p.splash = null;
+                        }
+                    });
+                    break;
+
+                case "rain":
+                    // 130 rain streaks, angled -8deg
+                    const rainAngle = -8 * Math.PI / 180;
+                    const rainDx = Math.sin(rainAngle);
+                    const rainDy = Math.cos(rainAngle);
+
+                    particles.forEach(p => {
+                        ctx.strokeStyle = `rgba(130, 190, 255, ${p.opacity})`;
+                        ctx.lineWidth = 1.3;
+                        ctx.lineCap = "round";
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x + rainDx * p.len, p.y + rainDy * p.len);
+                        ctx.stroke();
+
+                        p.y += p.speed;
+                        p.x += rainDx * p.speed;
+
+                        // On bottom row: small circular splash ripple expanding and fading
+                        if (p.y >= H - 10) {
+                            p.ripples.push({
+                                x: p.x,
+                                rx: 1,
+                                ry: 0.3,
+                                opacity: 0.7
+                            });
+                            p.y = -p.len;
+                            p.x = Math.random() * W;
+                        }
+
+                        // Render and update expanding ripples
+                        for (let i = p.ripples.length - 1; i >= 0; i--) {
+                            const r = p.ripples[i];
+                            ctx.strokeStyle = `rgba(130, 190, 255, ${r.opacity})`;
+                            ctx.lineWidth = 0.8;
+                            ctx.beginPath();
+                            ctx.ellipse(r.x, H - 5, r.rx, r.ry, 0, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            r.rx += 1.4;
+                            r.ry += 0.45;
+                            r.opacity -= 0.06;
+                            
+                            if (r.opacity <= 0) {
+                                p.ripples.splice(i, 1);
+                            }
+                        }
+                    });
+                    break;
+
+                case "thunder":
+                    // Base Heavy Rain Drops
+                    const tAngle = -8 * Math.PI / 180;
+                    const tDx = Math.sin(tAngle);
+                    const tDy = Math.cos(tAngle);
+
+                    particles.forEach(p => {
+                        ctx.strokeStyle = `rgba(130, 190, 255, ${p.opacity})`;
+                        ctx.lineWidth = 1.3;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x + tDx * p.len, p.y + tDy * p.len);
+                        ctx.stroke();
+
+                        p.y += p.speed;
+                        p.x += tDx * p.speed;
+
+                        if (p.y >= H - 10) {
+                            p.ripples.push({ x: p.x, rx: 1, ry: 0.3, opacity: 0.7 });
+                            p.y = -p.len;
+                            p.x = Math.random() * W;
+                        }
+
+                        for (let i = p.ripples.length - 1; i >= 0; i--) {
+                            const r = p.ripples[i];
+                            ctx.strokeStyle = `rgba(130, 190, 255, ${r.opacity})`;
+                            ctx.lineWidth = 0.8;
+                            ctx.beginPath();
+                            ctx.ellipse(r.x, H - 5, r.rx, r.ry, 0, 0, Math.PI * 2);
+                            ctx.stroke();
+                            r.rx += 1.4;
+                            r.ry += 0.45;
+                            r.opacity -= 0.06;
+                            if (r.opacity <= 0) p.ripples.splice(i, 1);
+                        }
+                    });
+
+                    // Lightning logic trigger randomly every 3-6 seconds
+                    flashTimer++;
+                    if (flashTimer >= nextFlashTime) {
+                        flashTimer = 0;
+                        nextFlashTime = 180 + Math.random() * 180; // 3-6s at 60fps
+                        
+                        // Set active lightning strike structure
+                        lightningState = generateLightningStrike();
+                    }
+
+                    // Draw active lightning strike
+                    if (lightningState) {
+                        if (lightningState.flashTimer > 0) {
+                            // Full-screen flash overlay for 80ms (approx 5 frames)
+                            ctx.fillStyle = `rgba(200, 160, 255, 0.18)`;
+                            ctx.fillRect(0, 0, W, H);
+                            lightningState.flashTimer--;
+                        }
+
+                        ctx.strokeStyle = `rgba(240, 220, 255, ${lightningState.opacity})`;
+                        ctx.lineWidth = 2.5;
+                        ctx.shadowColor = "rgba(180, 120, 255, 0.8)";
+                        ctx.shadowBlur = 20;
+                        ctx.beginPath();
+                        
+                        lightningState.points.forEach((pt, idx) => {
+                            if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                            else ctx.lineTo(pt.x, pt.y);
+                        });
+                        ctx.stroke();
+                        ctx.shadowBlur = 0; // reset
+
+                        lightningState.opacity -= 0.15;
+                        if (lightningState.opacity <= 0) {
+                            lightningState = null;
+                        }
+                    }
+                    break;
+
+                case "snow":
+                    // 90 snowflakes drifting
+                    particles.forEach(p => {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        p.y += p.speed;
+                        // Math.sin(t + seed) horizontal sway
+                        p.x += Math.sin(canvasTime * 1.2 + p.seed) * 0.5;
+
+                        if (p.y > H) {
+                            p.y = -p.r;
+                            p.x = Math.random() * W;
+                        }
+                    });
+                    break;
+
+                case "fog":
+                    // Draw drifting base ellipse cloud masses first
+                    fogCloudsList.forEach(c => {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${c.opacity})`;
+                        ctx.beginPath();
+                        ctx.ellipse(c.x, c.y, c.rx, c.ry, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        c.x += c.speed;
+                        if (c.x - c.rx > W) {
+                            c.x = -c.rx;
+                            c.y = H * 0.25 + Math.random() * (H * 0.35);
+                        }
+                    });
+
+                    // Draw scrolling fog bands
+                    fogBandsList.forEach((b, idx) => {
+                        ctx.fillStyle = `rgba(240, 245, 255, ${b.opacity})`;
+                        
+                        // Vertical position oscillates with sin(t * 0.18 + band)
+                        const oscillation = Math.sin(canvasTime * 0.7 + idx) * 12;
+                        
+                        // Render infinite looping scrolling rectangles
+                        ctx.fillRect(b.x, b.yBase + oscillation, W, b.height);
+                        ctx.fillRect(b.x - W, b.yBase + oscillation, W, b.height);
+
+                        b.x -= b.speed;
+                        if (b.x < 0) {
+                            b.x = W;
+                        }
+                    });
+                    break;
+
+                case "tornado":
+                    // Increment rotation angle
+                    tornadoAngle += 0.04;
+                    const cX = W / 2;
+
+                    // 20 particles helix spiral widening from top-center downward
+                    for (let i = 0; i < 20; i++) {
+                        const ratio = i / 20;
+                        const y = H * 0.12 + ratio * (H * 0.65);
+                        
+                        // radius widens from 10px at top to 70px at base
+                        const r = 10 + ratio * 60;
+                        const pAngle = tornadoAngle + i * 0.6;
+                        
+                        const x = cX + Math.cos(pAngle) * r;
+
+                        // Soft fuzzy radial gradients representing tornado path
+                        const fuzzRad = 15 + ratio * 20;
+                        const tGrad = ctx.createRadialGradient(x, y, 0, x, y, fuzzRad);
+                        tGrad.addColorStop(0, `rgba(110, 85, 65, ${0.4 - ratio * 0.15})`);
+                        tGrad.addColorStop(1, "rgba(110, 85, 65, 0)");
+                        
+                        ctx.fillStyle = tGrad;
+                        ctx.beginPath();
+                        ctx.arc(x, y, fuzzRad, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Render orbiting base debris particles (30 rects)
+                    particles.forEach(p => {
+                        p.angle += p.speed;
+                        const x = cX + Math.cos(p.angle) * p.dist;
+                        const y = H * 0.75 + Math.sin(p.angle) * (p.dist * 0.22) + p.yOffset; // elliptical orbit path
+                        
+                        ctx.fillStyle = p.color;
+                        ctx.save();
+                        ctx.translate(x, y);
+                        ctx.rotate(p.angle);
+                        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                        ctx.restore();
+                    });
+                    break;
+
+                case "haze":
+                    // Render haze ellipse layers
+                    ctx.fillStyle = "rgba(180, 140, 60, 0.06)"; // overall canvas wash tint
+                    ctx.fillRect(0, 0, W, H);
+
+                    particles.forEach(p => {
+                        ctx.fillStyle = `rgba(200, 170, 100, ${p.opacity})`;
+                        ctx.beginPath();
+                        ctx.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        p.x += p.speedX;
+                        p.y += p.speedY;
+
+                        // Bounce coordinates softly on outer boundaries
+                        if (p.x - p.rx > W) p.x = -p.rx;
+                        if (p.x + p.rx < 0) p.x = W + p.rx;
+                        if (p.y - p.ry > H) p.y = -p.ry;
+                        if (p.y + p.ry < 0) p.y = H + p.ry;
+                    });
+                    break;
+            }
+        }
+
+        // Helper: Generate a randomized lightning bolt vector path
+        function generateLightningStrike() {
+            const startX = Math.random() * W;
+            const points = [{ x: startX, y: 0 }];
+            
+            const segs = 7 + Math.floor(Math.random() * 5);
+            const targetY = H * 0.45 + Math.random() * (H * 0.15); // Top 60% of canvas
+            const stepY = targetY / segs;
+            
+            let curX = startX;
+            let curY = 0;
+
+            for (let i = 0; i < segs; i++) {
+                curY += stepY;
+                curX += (Math.random() - 0.5) * 65; // zigzag path
+                points.push({ x: curX, y: curY });
+            }
+
+            return {
+                points,
+                opacity: 1.0,
+                flashTimer: 5 // 80ms full-screen overlay (5 frames at 60fps)
+            };
+        }
+    </script>
+</body>
+</html>
