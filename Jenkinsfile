@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        APP_DIR = '/home/ec2-user/app'
+        APP_DIR = '/home/ubuntu/app'
         COMPOSE_FILE = "${APP_DIR}/docker-compose.yml"
     }
 
@@ -19,7 +19,7 @@ pipeline {
             steps {
                 echo '🐳 Verifying Docker is available...'
                 sh 'docker --version'
-                sh 'docker-compose --version'
+                sh 'docker compose version'
             }
         }
 
@@ -40,8 +40,8 @@ pipeline {
                 echo '🚀 Building Docker image and deploying stack...'
                 sh """
                     cd ${APP_DIR}
-                    docker-compose down --remove-orphans || true
-                    docker-compose up --build -d
+                    docker compose down --remove-orphans || true
+                    docker compose up --build -d
                 """
             }
         }
@@ -51,7 +51,7 @@ pipeline {
                 echo '🩺 Running health checks on services...'
                 sh """
                     sleep 10
-                    docker-compose -f ${COMPOSE_FILE} ps
+                    docker compose -f ${COMPOSE_FILE} ps
                     curl -f http://localhost:80 && echo '✅ Weather App is UP' || echo '❌ Weather App is DOWN'
                     curl -f http://localhost:9090 && echo '✅ Prometheus is UP' || echo '❌ Prometheus is DOWN'
                     curl -f http://localhost:3000 && echo '✅ Grafana is UP' || echo '❌ Grafana is DOWN'
