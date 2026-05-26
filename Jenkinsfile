@@ -1,75 +1,91 @@
-pipeline {
-    agent any
+ubuntu@ip-172-31-46-26:~$ cat /home/ubuntu/app/docker-compose.yml
+services:
+  weather-app:
+    build: .
+    container_name: weather-app
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - weather-net
 
-    environment {
-        APP_DIR = '/home/ubuntu/app'
-        COMPOSE_FILE = "${APP_DIR}/docker-compose.yml"
-    }
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-exporter
+    restart: always
+    command:
+      - -nginx.scrape-uri=http://weather-app:80/nginx_status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - weather-app
+    networks:
+      - weather-net
 
-    stages {
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - weather-net
 
-        stage('Checkout') {
-            steps {
-                echo '📥 Pulling latest code from repository...'
-                checkout scm
-            }
-        }
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - nginx-exporter
+      - node-exporter
+    networks:
+      - weather-net
 
-        stage('Verify Docker') {
-            steps {
-                echo '🐳 Verifying Docker is available...'
-                sh 'docker --version'
-                sh 'docker compose version'
-            }
-        }
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - weather-net
 
-        stage('Copy Files to App Directory') {
-            steps {
-                echo '📂 Syncing workspace files to app directory...'
-                sh """
-                    mkdir -p ${APP_DIR}/grafana/provisioning/datasources
-                    mkdir -p ${APP_DIR}/grafana/provisioning/dashboards
-                    mkdir -p ${APP_DIR}/grafana/dashboards
-                    cp -r ${WORKSPACE}/. ${APP_DIR}/
-                """
-            }
-        }
 
-        stage('Build & Deploy') {
-            steps {
-                echo '🚀 Building Docker image and deploying stack...'
-                sh """
-                    cd ${APP_DIR}
-                    docker compose down --remove-orphans || true
-                    docker compose up --build -d
-                """
-            }
-        }
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    restart: always
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+    networks:
+      - weather-net
 
-        stage('Health Check') {
-            steps {
-                echo '🩺 Running health checks on services...'
-                sh """
-                    sleep 10
-                    docker compose -f ${COMPOSE_FILE} ps
-                    curl -f http://localhost:80 && echo '✅ Weather App is UP' || echo '❌ Weather App is DOWN'
-                    curl -f http://localhost:9090 && echo '✅ Prometheus is UP' || echo '❌ Prometheus is DOWN'
-                    curl -f http://localhost:3000 && echo '✅ Grafana is UP' || echo '❌ Grafana is DOWN'
-                """
-            }
-        }
-    }
+networks:
+  weather-net:
+    driver: bridge
 
-    post {
-        success {
-            echo '🎉 Deployment successful! Weather App is live.'
-        }
-        failure {
-            echo '💥 Deployment failed. Check the logs above.'
-        }
-        always {
-            echo '📋 Pipeline finished. Cleaning up workspace...'
-            cleanWs()
-        }
-    }
-}
+volumes:
+  jenkins_home:
