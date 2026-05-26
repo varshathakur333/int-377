@@ -14,7 +14,6 @@ pipeline {
             steps {
                 echo 'Verifying Docker...'
                 sh 'docker --version'
-                sh 'docker compose version'
             }
         }
 
@@ -22,8 +21,8 @@ pipeline {
             steps {
                 echo 'Building and deploying...'
                 sh 'cp -r ${WORKSPACE}/. /home/ubuntu/app/'
-                sh 'cd /home/ubuntu/app && docker compose down --remove-orphans || true'
-                sh 'cd /home/ubuntu/app && docker compose up --build -d'
+                sh 'cd /home/ubuntu/app && docker-compose down --remove-orphans || true'
+                sh 'cd /home/ubuntu/app && docker-compose up --build -d'
             }
         }
 
